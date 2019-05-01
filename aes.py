@@ -1,8 +1,7 @@
 class AES:
     """
     A class used to encapsulate every method and 
-    attribute necessary to encrypt with AES-128
-    algorith. 
+    attribute necessary to encrypt with AES algorith. 
     
     Implementation based on Nist Fips 197.
 
