@@ -1,6 +1,6 @@
 # What is this?
 
-An implementation of AES algorithm in Python.
+An implementation of the AES algorithm in Python 3.
 
 # Can I use it?
 

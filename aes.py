@@ -149,8 +149,8 @@ class AES:
         s : matrix
             State
         """
-        for i in range(4):
-            for j in range(self.Nb):
+        for i in range(self.Nb):
+            for j in range(4):
                 s[i][j] = self.Sbox[s[i][j]]
     
     def inv_sub_bytes(self, s):
@@ -163,8 +163,8 @@ class AES:
         s : matrix
             State
         """
-        for i in range(4):
-            for j in range(self.Nb):
+        for i in range(self.Nb):
+            for j in range(4):
                 s[i][j] = self.InvSbox[s[i][j]]
 
     def shift_rows(self, s):
