@@ -73,13 +73,23 @@ class AES:
     )
 
 
-    def __init__(self, key):
-        self.key = key
+    def __init__(self, key, mode=128):
+        if mode == 192:
+            self.Nk = 6
+            self.Nr = 12
+            self.key = self.text2matrix(key, 24)
+        elif mode == 256:
+            self.Nk = 8
+            self.Nr = 14
+            self.key = self.text2matrix(key, 32)
+        else:
+            self.key = self.text2matrix(key)
+
         self.key_expansion(self.key)
 
-    def text2matrix(self, text):
+    def text2matrix(self, text, len=16):
         """
-        Transforms a 128-bit block written in plain text form to the State form.
+        Transforms a 128/192/256 bit block written in plain text form to the State form.
 
         Parameters
         ----------
@@ -89,8 +99,8 @@ class AES:
         """
         state = []
 
-        for i in range(16):
-            # 16 bytes
+        for i in range(len):
+            # two hex characters == 1 byte
             byte = int(text[i*2:i*2+2], 16)
             if i % 4 == 0:
                 # this means that the byte to append is the first of the column
@@ -101,9 +111,9 @@ class AES:
 
         return state
 
-    def matrix2text(self, s):
+    def matrix2text(self, s, len=16):
         """
-        Transforms a 128-bit block written in State form into plain text.
+        Transforms a 128/192/256 bit block written in State form into plain text.
 
         Parameters
         ----------
@@ -112,7 +122,7 @@ class AES:
             State
         """
         text = ""
-        for i in range(4):
+        for i in range(len // 4):
             for j in range(4):
                 text += format(s[i][j], '02x')
 
@@ -269,9 +279,10 @@ class AES:
             State
 
         k : matrix
+            Key
 
         """
-        for i in range(4):
+        for i in range(self.Nb):
             for j in range(4):
                 s[i][j] ^= k[i][j]
 
@@ -311,8 +322,8 @@ class AES:
         key : string
             Cypher Key in string format.
         """        
-        
-        self.round_keys = self.text2matrix(key)
+
+        self.round_keys = self.key
 
         for i in range(self.Nk, self.Nb * (self.Nr + 1)):
             self.round_keys.append([0, 0, 0, 0])
@@ -322,6 +333,11 @@ class AES:
                 self.rotate_word(temp)
                 self.sub_word(temp)
                 temp[0] = temp[0] ^ self.Rcon[i // self.Nk]
+            elif self.Nk > 6 and i % self.Nk == 4:
+                """If Nk = 8 (AES-256) and i - 4 is multiple of Nk
+                then SUbWord() is applied to word[i - 1] prior to
+                the XOR. Nist Fips 192. Section 5.2"""
+                self.sub_word(temp)
 
             for j in range(4):
                 self.round_keys[i][j] = self.round_keys[i - self.Nk][j] ^ temp[j]
@@ -349,7 +365,7 @@ class AES:
 
         self.sub_bytes(self.state)
         self.shift_rows(self.state)
-        self.add_round_key(self.state, self.round_keys[40:])
+        self.add_round_key(self.state, self.round_keys[len(self.round_keys) - 4:])
 
         return self.matrix2text(self.state)
 
@@ -366,9 +382,9 @@ class AES:
 
         self.encrypted_state = self.text2matrix(text)
 
-        self.add_round_key(self.encrypted_state, self.round_keys[40:])
+        self.add_round_key(self.encrypted_state, self.round_keys[len(self.round_keys) - 4:])
 
-        for i in range(9, 0, -1):
+        for i in range(self.Nr - 1, 0, -1):
             self.inv_shift_rows(self.encrypted_state)
             self.inv_sub_bytes(self.encrypted_state)
             self.add_round_key(self.encrypted_state, self.round_keys[self.Nb * i : self.Nb * (i + 1)])
