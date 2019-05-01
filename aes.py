@@ -74,6 +74,18 @@ class AES:
 
 
     def __init__(self, key, mode=128):
+        """
+        AES class constructor.
+
+        Parameters
+        ----------
+
+        key : string
+            Cypher Key written in hex as string.
+
+        mode : int
+            Key length (default 128)
+        """
         if mode == 192:
             self.Nk = 6
             self.Nr = 12
@@ -344,13 +356,21 @@ class AES:
 
     def cypher(self, text):
         """
-        Cyphers the given text with the key given previously.
+        Cyphers the given text with the key given in the class
+        constructor.
 
         Parameters
         ----------
 
         text : string
             128 bit block in plain text.
+
+        Returns
+        -------
+
+        encrypted_text : string
+            128 bit block in plain text encrypted with the key expecified
+            in the class constructor.
         """
 
         self.state = self.text2matrix(text)
@@ -371,13 +391,21 @@ class AES:
 
     def decipher(self, text):
         """
-        Decyphers the given encrypted text with the key given previously.
+        Decyphers the given encrypted text with the key given 
+        in the class constructor.
 
         Parameters
         ----------
 
         text : string
             128 bit block in plain text.
+
+        Returns
+        -------
+
+        decrypted_text : string
+            128 bit block in plain text decrypted with the key given
+            in the class constructor.
         """
 
         self.encrypted_state = self.text2matrix(text)
