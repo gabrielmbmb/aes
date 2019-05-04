@@ -31,7 +31,7 @@ The key used for encryption will be displayed and saved in the file "key.txt".
 
 The key used for decryption will be read from "key.txt"
 
-    ./crypt -d -i <file_to_decrypt> -o <file_decrypted> -m CTR -l 256
+    ./crypt.py -d -i <file_to_decrypt> -o <file_decrypted> -m CTR -l 256
 
 # References
 
