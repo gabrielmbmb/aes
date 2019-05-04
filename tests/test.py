@@ -1,4 +1,7 @@
 import unittest
+import sys
+sys.path.append("../aes")
+
 from aes import AES
 
 
@@ -6,8 +9,10 @@ class AesTest(unittest.TestCase):
     def setUp(self):
         self.text_to_cipher = "00112233445566778899aabbccddeeff"
         self.AES_128 = AES("000102030405060708090a0b0c0d0e0f")
-        self.AES_192 = AES("000102030405060708090a0b0c0d0e0f1011121314151617", 192)
-        self.AES_256 = AES("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", 256)
+        self.AES_192 = AES(
+            "000102030405060708090a0b0c0d0e0f1011121314151617", 192)
+        self.AES_256 = AES(
+            "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", 256)
 
     def test_encrypt_128(self):
         cipher = self.AES_128.cipher(self.text_to_cipher)

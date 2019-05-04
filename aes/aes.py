@@ -1,4 +1,24 @@
 import os
+from tqdm import tqdm
+
+def random_key_generator(key_length):
+    """
+    Creates a random key with key_length written
+    in hexadecimal as string
+
+    Paramaters
+    ----------
+
+    key_length : int
+        Key length in bits
+
+    Returns
+    -------
+
+    key : string
+        Key in hexadecimal as string
+    """
+    return bytes.hex(os.urandom(key_length // 8))
 
 class AES:
     """
@@ -582,7 +602,7 @@ class ECB:
             hex_array[-1] = pad(hex_array[-1], 16)
 
         cipher_array = []
-        for i in range(len(hex_array)):
+        for i in tqdm(range(len(hex_array)), desc="ECB encryption"):
             cipher_array.append(self.block_cipher_alg.cipher(hex_array[i]))
 
         FileTools.write_file(encrypted_file_name, cipher_array)
@@ -603,7 +623,7 @@ class ECB:
         """
         hex_array = FileTools.open_file(filename, 32)
         decrypted_array = []
-        for i in range(len(hex_array)):
+        for i in tqdm(range(len(hex_array)), desc="ECB decryption"):
             decrypted_array.append(self.block_cipher_alg.decipher(hex_array[i]))
 
         # unpad last block
@@ -656,7 +676,7 @@ class CBC:
         cipher_array = [self.iv]
 
         iv = self.iv
-        for i in range(len(hex_array)):
+        for i in tqdm(range(len(hex_array)), desc="CBC encryption"):
             block_to_cipher = xor_blocks(iv, hex_array[i])
             cipher_array.append(self.block_cipher_alg.cipher(block_to_cipher))
 
@@ -682,7 +702,7 @@ class CBC:
         hex_array = FileTools.open_file(filename, 32)
         iv = hex_array[0]
         decrypted_array = []
-        for i in range(1, len(hex_array)):
+        for i in tqdm(range(1, len(hex_array)), desc="CBC decryption"):
             decrypted_array.append(self.block_cipher_alg.decipher(hex_array[i]))
             decrypted_array[i - 1] = xor_blocks(iv, decrypted_array[i - 1])
 
@@ -731,7 +751,7 @@ class CTR:
         cipher_array = [self.ctr]
 
         ctr = self.ctr
-        for i in range(len(hex_array)):
+        for i in tqdm(range(len(hex_array)), desc="CTR encryption"):
             ctr_encrypted = self.block_cipher_alg.cipher(ctr)
             cipher_array.append(xor_blocks(ctr_encrypted, hex_array[i]))
             ctr = increment_ctr(ctr)
@@ -756,7 +776,7 @@ class CTR:
         hex_array = FileTools.open_file(filename, 32)
         ctr = hex_array[0]
         decrypted_array = []
-        for i in range(1, len(hex_array)):
+        for i in tqdm(range(1, len(hex_array)), desc="CTR decryption"):
             ctr_encrypted = self.block_cipher_alg.cipher(ctr)
             decrypted_array.append(xor_blocks(ctr_encrypted, hex_array[i]))
             ctr = increment_ctr(ctr)
