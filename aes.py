@@ -1,3 +1,5 @@
+import os
+
 class AES:
     """
     A class used to encapsulate every method and 
@@ -80,7 +82,7 @@ class AES:
         ----------
 
         key : string
-            Cypher Key written in hex as string.
+            Cipher Key written in hex as string.
 
         mode : int
             Key length (default 128)
@@ -331,7 +333,7 @@ class AES:
         ----------
 
         key : string
-            Cypher Key in string format.
+            Cipher Key in string format.
         """        
 
         self.round_keys = self.key
@@ -353,9 +355,9 @@ class AES:
             for j in range(4):
                 self.round_keys[i][j] = self.round_keys[i - self.Nk][j] ^ temp[j]
 
-    def cypher(self, text):
+    def cipher(self, text):
         """
-        Cyphers the given text with the key given in the class
+        Ciphers the given text with the key given in the class
         constructor.
 
         Parameters
@@ -390,7 +392,7 @@ class AES:
 
     def decipher(self, text):
         """
-        Decyphers the given encrypted text with the key given 
+        Deciphers the given encrypted text with the key given 
         in the class constructor.
 
         Parameters
@@ -422,3 +424,332 @@ class AES:
         self.add_round_key(self.encrypted_state, self.round_keys[:4])
 
         return self.matrix2text(self.encrypted_state)
+
+def pad(block, block_length):
+    """
+    Pads a block with padding bytes to make it
+    to the required length, in this case, 128 bits.
+
+    PKCS5 padding
+    
+    Parameters
+    ----------
+
+    block : string
+        Block to be padded written in hexadecimal as string.
+
+    block_length : int
+        Block length in bytes.
+
+    Returns
+    
+    -------
+    block : string
+        Block padded
+    """
+    bytes_to_pad = block_length - len(block) // 2
+
+    for _ in range(bytes_to_pad):
+        block += format(bytes_to_pad, '02x')
+
+    return block
+
+def unpad(block):
+    """
+    Unpads a block padded with pad() method.
+
+    Parameters
+    ----------
+
+    block : string
+        Block to be unpadded written in hexadecimal as string.
+
+
+    Returns
+    -------
+    
+    block : string
+        Block padded
+    """
+    bytes_to_unpad = int(block[-2:], 16)
+    return block[:-bytes_to_unpad*2]
+    
+class ECB:
+    """
+    A class used to encapsulate every method and
+    attribute necessary to encrypt using ECB block
+    cipher mode of operation.
+    """
+
+    def __init__(self, block_cipher_alg):
+        """
+        ECB class constructor.
+
+        Parameters
+        ----------
+
+        block_cipher_alg : object
+            Block cypher algorithm object
+        """
+        self.block_cipher_alg = block_cipher_alg
+
+    def cipher(self, filename):
+        """
+        Ciphers file with ECB and block cipher algorithm 
+        passed in class constructor.
+
+        Parameters
+        ----------
+
+        filename : string
+            File name to cipher
+
+        Returns
+        -------
+
+        new_filename : string
+            File name of the encripted file.
+        """
+        hex_array = FileTools.open_file(filename, 32)
+
+        # check if last block need to be padded
+        if len(hex_array[-1]) < 32:
+            hex_array[-1] = pad(hex_array[-1], 16)
+
+        cipher_array = []
+        for i in range(len(hex_array)):
+            cipher_array.append(self.block_cipher_alg.cipher(hex_array[i]))
+
+        filename_splitted = os.path.splitext(filename)
+        new_filename = filename_splitted[0] + \
+            "_encrypted" + filename_splitted[1]
+
+        FileTools.write_file(new_filename, cipher_array)
+
+        return new_filename
+
+    def decipher(self, filename):
+        """
+        Deciphers file with ECB and block cipher algorithm 
+        passed in class constructor.
+
+        Parameters
+        ----------
+
+        filename : string
+            File name to decipher
+        """
+        hex_array = FileTools.open_file(filename, 32)
+        decipher_array = []
+        for i in range(len(hex_array)):
+            decipher_array.append(self.block_cipher_alg.decipher(hex_array[i]))
+
+        # unpad last block
+        decipher_array[-1] = unpad(decipher_array[-1])
+
+        filename_splitted = os.path.splitext(filename)
+        new_filename = filename_splitted[0] + \
+            "_decrypted" + filename_splitted[1]
+
+        FileTools.write_file(new_filename, decipher_array)
+        
+
+class CBC:
+    """
+    A class used to encapsulate every method and
+    attribute necessary to encrypt using CBC block
+    cipher mode of operation.
+    """
+
+    def __init__(self, block_cipher_alg, iv_length):
+        """
+        ECB class constructor.
+
+        Parameters
+        ----------
+
+        block_cipher_alg : object
+            Block cypher algorithm object.
+
+        iv_length : int
+            Length of the Initialization Vector in bytes.
+        """
+        self.block_cipher_alg = block_cipher_alg
+        self.iv = self.generate_random_iv(iv_length)
+
+    def cipher(self, filename):
+        """
+        Ciphers file with CBC an block cipher algorithm 
+        passed in class constructor.
+
+        Parameters
+        ----------
+
+        filename : string
+            File name to cipher
+
+        Returns
+        -------
+
+        new_filename : string
+            File name of the encripted file.
+        """
+        hex_array = FileTools.open_file(filename, 32)
+
+        # check if last block need to be padded
+        if len(hex_array[-1]) < 32:
+            hex_array[-1] = pad(hex_array[-1], 16)
+
+        # Prefix the IV to the cipher text.
+        cipher_array = [self.iv]
+
+        iv = self.iv
+        for i in range(0, len(hex_array)):
+            block_to_cipher = self.xor_blocks(iv, hex_array[i])
+            cipher_array.append(self.block_cipher_alg.cipher(block_to_cipher))
+
+            # the ciphered block will be the "IV" for the next block
+            iv = cipher_array[i + 1]
+
+        filename_splitted = os.path.splitext(filename)
+        new_filename = filename_splitted[0] + \
+            "_encrypted" + filename_splitted[1]
+
+        FileTools.write_file(new_filename, cipher_array)
+
+        return new_filename
+
+    def decipher(self, filename):
+        """
+        Deciphers file with ECB and block cipher algorithm 
+        passed in class constructor.
+
+        Parameters
+        ----------
+
+        filename : string
+            File name to decipher
+        """
+        hex_array = FileTools.open_file(filename, 32)
+        iv = hex_array[0]
+        decipher_array = []
+        for i in range(1, len(hex_array)):
+            decipher_array.append(self.block_cipher_alg.decipher(hex_array[i]))
+            decipher_array[i - 1] = self.xor_blocks(iv, decipher_array[i - 1])
+
+            # the ciphered block will be the "IV" for the next block
+            iv = hex_array[i]
+
+
+        # unpad last block
+        decipher_array[-1] = unpad(decipher_array[-1])
+
+        filename_splitted = os.path.splitext(filename)
+        new_filename = filename_splitted[0] + \
+            "_decrypted" + filename_splitted[1]
+
+        FileTools.write_file(new_filename, decipher_array)
+
+
+    def generate_random_iv(self, iv_length):
+        """
+        Generates a random Initialization Vector of 
+        iv_length bytes written in hexadecimal as string.
+
+        Parameters
+        ----------
+
+        iv_length : int
+            Initialization Vector length in bytes
+
+        Returns
+        -------
+
+        iv : string
+            Initialization Vector written in hexadecimal as string
+        """
+        return bytes.hex(os.urandom(iv_length))
+
+    def xor_blocks(self, iv, block):
+        """
+        XOR two blocks written in hexadecimal as string.
+
+        Parameters
+        ----------
+
+        iv : string
+            Initialization Vector
+
+        block : string
+            Block to XOR with IV
+
+        Returns
+        -------
+
+        xorted_block : string
+            XORted block written in hexadecimal as string
+        """
+        return format(int(iv, 16) ^ int(block, 16), '032x')
+
+
+
+class FileTools:
+    """
+    A class used to open and write files as binary, 
+    and transform its content to hexadecimal.
+    """
+
+    @staticmethod
+    def open_file(filename, chunk_size):
+        """
+        Opens a file as binary and puts its content 
+        into an array in which each array cell is 
+        chunk_size bits in hexadecimal form written
+        as string.
+
+        Parameters
+        ----------
+
+        filename : string
+            Filename to read
+
+        chunk_size : int
+            Chunk size
+
+        Returns
+        -------
+
+        hex_array : array
+            Content of the file splitted in chunks.
+        """
+        with open(filename, "rb") as f:
+            hex_array = []
+            for offset in range(0, os.path.getsize(filename), 16):
+                hex_array.append(bytes.hex(f.read(16)))
+                f.seek(offset + 16)
+
+            f.close()
+        
+        return hex_array
+
+    @staticmethod
+    def write_file(filename, cipher_array):
+        """
+        Write the content passed in hexadecimal splitted 
+        in chunks of 128 bits inside an array into a
+        new file.
+
+        Parameters
+        ----------
+
+        filename : string
+            New file name
+
+        cipher_array : array
+            Array with hexadecimal chunks of 128 bits.
+        """
+        with open(filename, "ab") as f:
+            for i in range(len(cipher_array)):
+                f.write(bytes.fromhex(cipher_array[i]))
+
+            f.close()
