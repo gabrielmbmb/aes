@@ -739,7 +739,7 @@ class FileTools:
         return hex_array
 
     @staticmethod
-    def write_file(filename, cipher_array):
+    def write_file(filename, block_array):
         """
         Write the content passed in hexadecimal splitted 
         in chunks of 128 bits inside an array into a
@@ -751,11 +751,11 @@ class FileTools:
         filename : string
             New file name
 
-        cipher_array : array
+        block_array : array
             Array with hexadecimal chunks of 128 bits.
         """
         with open(filename, "ab") as f:
-            for i in range(len(cipher_array)):
-                f.write(bytes.fromhex(cipher_array[i]))
+            for i in range(len(block_array)):
+                f.write(bytes.fromhex(block_array[i]))
 
             f.close()
