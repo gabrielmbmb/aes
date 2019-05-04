@@ -470,7 +470,81 @@ def unpad(block):
     """
     bytes_to_unpad = int(block[-2:], 16)
     return block[:-bytes_to_unpad*2]
-    
+
+def xor_blocks(block_1, block_2):
+    """
+    XOR two blocks written in hexadecimal as string.
+
+    Parameters
+    ----------
+
+    block_1 : string
+        Block of bytes written in hexadecimal.
+
+    block_2 : string
+        Block of bytes written in hexadecimal.
+
+    Returns
+    -------
+
+    xorted_block : string
+        XORted block written in hexadecimal as string
+    """
+    return format(int(block_1, 16) ^ int(block_2, 16), '032x')
+
+def generate_random_iv(iv_length):
+    """
+    Generates a random Initialization Vector of 
+    iv_length bytes written in hexadecimal as string.
+
+    Parameters
+    ----------
+
+    iv_length : int
+        Initialization Vector length in bytes
+
+    Returns
+    -------
+
+    iv : string
+        Initialization Vector written in hexadecimal as string
+    """
+    return bytes.hex(os.urandom(iv_length))
+
+def generate_random_ctr():
+    """
+    Generates a random counter using the method of
+    generating a random IV of 8 bytes and appending 
+    another 8 bytes of 0s to the end. The part of the
+    IV is known as nonce and the part of the 0s as counter.
+
+    Returns
+    -------
+
+    counter : string
+        Random counter written in hexadecimal as string.
+    """
+    return generate_random_iv(8) + "0000000000000000"
+
+def increment_ctr(ctr):
+    """
+    Increments one the counter.
+
+    Parameters
+    ----------
+
+    ctr : string
+        Counter
+
+    Returns
+    -------
+
+    incremented_counter : string
+        Incremented Counter
+    """
+    ctr_inc_int = int.from_bytes(bytes.fromhex(ctr), byteorder="big") + 1
+    return bytes.hex(ctr_inc_int.to_bytes(length=16, byteorder="big"))
+
 class ECB:
     """
     A class used to encapsulate every method and
@@ -487,7 +561,7 @@ class ECB:
     def __init__(self, block_cipher_alg):
         self.block_cipher_alg = block_cipher_alg
 
-    def cipher(self, filename):
+    def cipher(self, filename, encrypted_file_name):
         """
         Ciphers file with ECB and block cipher algorithm 
         passed in class constructor.
@@ -496,13 +570,10 @@ class ECB:
         ----------
 
         filename : string
-            File name to cipher
+            Name of file to cipher
 
-        Returns
-        -------
-
-        new_filename : string
-            File name of the encripted file.
+        encrypted_file_name : string
+            Name of the encrypted file.
         """
         hex_array = FileTools.open_file(filename, 32)
 
@@ -514,15 +585,9 @@ class ECB:
         for i in range(len(hex_array)):
             cipher_array.append(self.block_cipher_alg.cipher(hex_array[i]))
 
-        filename_splitted = os.path.splitext(filename)
-        new_filename = filename_splitted[0] + \
-            "_encrypted" + filename_splitted[1]
+        FileTools.write_file(encrypted_file_name, cipher_array)
 
-        FileTools.write_file(new_filename, cipher_array)
-
-        return new_filename
-
-    def decipher(self, filename):
+    def decipher(self, filename, decrypted_file_name):
         """
         Deciphers file with ECB and block cipher algorithm 
         passed in class constructor.
@@ -531,21 +596,20 @@ class ECB:
         ----------
 
         filename : string
-            File name to decipher
+            Name of file to decipher
+
+        decrypted_file_name : string
+            Decrypted file name
         """
         hex_array = FileTools.open_file(filename, 32)
-        decipher_array = []
+        decrypted_array = []
         for i in range(len(hex_array)):
-            decipher_array.append(self.block_cipher_alg.decipher(hex_array[i]))
+            decrypted_array.append(self.block_cipher_alg.decipher(hex_array[i]))
 
         # unpad last block
-        decipher_array[-1] = unpad(decipher_array[-1])
+        decrypted_array[-1] = unpad(decrypted_array[-1])
 
-        filename_splitted = os.path.splitext(filename)
-        new_filename = filename_splitted[0] + \
-            "_decrypted" + filename_splitted[1]
-
-        FileTools.write_file(new_filename, decipher_array)
+        FileTools.write_file(decrypted_file_name, decrypted_array)
         
 
 class CBC:
@@ -566,9 +630,9 @@ class CBC:
 
     def __init__(self, block_cipher_alg, iv_length):
         self.block_cipher_alg = block_cipher_alg
-        self.iv = self.generate_random_iv(iv_length)
+        self.iv = generate_random_iv(iv_length)
 
-    def cipher(self, filename):
+    def cipher(self, filename, encrypted_file_name):
         """
         Ciphers file with CBC an block cipher algorithm 
         passed in class constructor.
@@ -577,13 +641,10 @@ class CBC:
         ----------
 
         filename : string
-            File name to cipher
+            Name of file to cipher
 
-        Returns
-        -------
-
-        new_filename : string
-            File name of the encripted file.
+        encrypted_file_name : string
+            Name of the encrypted file.
         """
         hex_array = FileTools.open_file(filename, 32)
 
@@ -595,22 +656,16 @@ class CBC:
         cipher_array = [self.iv]
 
         iv = self.iv
-        for i in range(0, len(hex_array)):
-            block_to_cipher = self.xor_blocks(iv, hex_array[i])
+        for i in range(len(hex_array)):
+            block_to_cipher = xor_blocks(iv, hex_array[i])
             cipher_array.append(self.block_cipher_alg.cipher(block_to_cipher))
 
             # the ciphered block will be the "IV" for the next block
             iv = cipher_array[i + 1]
 
-        filename_splitted = os.path.splitext(filename)
-        new_filename = filename_splitted[0] + \
-            "_encrypted" + filename_splitted[1]
+        FileTools.write_file(encrypted_file_name, cipher_array)
 
-        FileTools.write_file(new_filename, cipher_array)
-
-        return new_filename
-
-    def decipher(self, filename):
+    def decipher(self, filename, decrypted_file_name):
         """
         Deciphers file with ECB and block cipher algorithm 
         passed in class constructor.
@@ -619,85 +674,94 @@ class CBC:
         ----------
 
         filename : string
-            File name to decipher
+            Name of file to decipher
+
+        decrypted_file_name : string
+            Decrypted file name
         """
         hex_array = FileTools.open_file(filename, 32)
         iv = hex_array[0]
-        decipher_array = []
+        decrypted_array = []
         for i in range(1, len(hex_array)):
-            decipher_array.append(self.block_cipher_alg.decipher(hex_array[i]))
-            decipher_array[i - 1] = self.xor_blocks(iv, decipher_array[i - 1])
+            decrypted_array.append(self.block_cipher_alg.decipher(hex_array[i]))
+            decrypted_array[i - 1] = xor_blocks(iv, decrypted_array[i - 1])
 
             # the ciphered block will be the "IV" for the next block
             iv = hex_array[i]
 
-
         # unpad last block
-        decipher_array[-1] = unpad(decipher_array[-1])
+        decrypted_array[-1] = unpad(decrypted_array[-1])
 
-        filename_splitted = os.path.splitext(filename)
-        new_filename = filename_splitted[0] + \
-            "_decrypted" + filename_splitted[1]
-
-        FileTools.write_file(new_filename, decipher_array)
-
-
-    def generate_random_iv(self, iv_length):
-        """
-        Generates a random Initialization Vector of 
-        iv_length bytes written in hexadecimal as string.
-
-        Parameters
-        ----------
-
-        iv_length : int
-            Initialization Vector length in bytes
-
-        Returns
-        -------
-
-        iv : string
-            Initialization Vector written in hexadecimal as string
-        """
-        return bytes.hex(os.urandom(iv_length))
-
-    def xor_blocks(self, iv, block):
-        """
-        XOR two blocks written in hexadecimal as string.
-
-        Parameters
-        ----------
-
-        iv : string
-            Initialization Vector
-
-        block : string
-            Block to XOR with IV
-
-        Returns
-        -------
-
-        xorted_block : string
-            XORted block written in hexadecimal as string
-        """
-        return format(int(iv, 16) ^ int(block, 16), '032x')
-
+        FileTools.write_file(decrypted_file_name, decrypted_array)
 
 class CTR:
     """
     A class used to encapsulate every method and
     attribute necessary to encrypt using CTR block
     cipher mode of operation.
+
+    Parameters
+    ----------
+
+    block_cipher_alg : object
+        Block cypher algorithm object.
     """
 
-    def __init__(self):
-        raise NotImplementedError
+    def __init__(self, block_cipher_alg):
+        self.block_cipher_alg = block_cipher_alg
+        self.ctr = generate_random_ctr()
 
-    def cipher(self):
-        raise NotImplementedError
+    def cipher(self, filename, encrypted_file_name):
+        """
+        Ciphers file with CTR an block cipher algorithm 
+        passed in class constructor.
 
-    def decipher(self):
-        raise NotImplementedError
+        Parameters
+        ----------
+
+        filename : string
+            Name of file to cipher
+
+        encrypted_file_name : string
+            Name of the encrypted file.
+        """
+        hex_array = FileTools.open_file(filename, 32)
+
+        # Prefix the ctr to the cipher text.
+        cipher_array = [self.ctr]
+
+        ctr = self.ctr
+        for i in range(len(hex_array)):
+            ctr_encrypted = self.block_cipher_alg.cipher(ctr)
+            cipher_array.append(xor_blocks(ctr_encrypted, hex_array[i]))
+            ctr = increment_ctr(ctr)
+
+        FileTools.write_file(encrypted_file_name, cipher_array)
+
+        
+    def decipher(self, filename, decrypted_file_name):
+        """
+        Deciphers file with ECB and block cipher algorithm 
+        passed in class constructor.
+
+        Parameters
+        ----------
+
+        filename : string
+            Name of file to decipher
+
+        decrypted_file_name : string
+            Decryted file name
+        """
+        hex_array = FileTools.open_file(filename, 32)
+        ctr = hex_array[0]
+        decrypted_array = []
+        for i in range(1, len(hex_array)):
+            ctr_encrypted = self.block_cipher_alg.cipher(ctr)
+            decrypted_array.append(xor_blocks(ctr_encrypted, hex_array[i]))
+            ctr = increment_ctr(ctr)
+
+        FileTools.write_file(decrypted_file_name, decrypted_array)
 
 class FileTools:
     """
