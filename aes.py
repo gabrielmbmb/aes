@@ -7,6 +7,15 @@ class AES:
     
     Implementation based on Nist Fips 197.
 
+    Parameters
+    ----------
+
+    key : string
+        Cipher Key written in hex as string.
+
+    mode : int
+        Key length (default 128)
+
     Attributes
     ----------
 
@@ -75,18 +84,6 @@ class AES:
 
 
     def __init__(self, key, mode=128):
-        """
-        AES class constructor.
-
-        Parameters
-        ----------
-
-        key : string
-            Cipher Key written in hex as string.
-
-        mode : int
-            Key length (default 128)
-        """
         if mode == 192:
             self.Nk = 6
             self.Nr = 12
@@ -479,18 +476,15 @@ class ECB:
     A class used to encapsulate every method and
     attribute necessary to encrypt using ECB block
     cipher mode of operation.
+
+    Parameters
+    ----------
+
+    block_cipher_alg : object
+        Block cypher algorithm object
     """
 
     def __init__(self, block_cipher_alg):
-        """
-        ECB class constructor.
-
-        Parameters
-        ----------
-
-        block_cipher_alg : object
-            Block cypher algorithm object
-        """
         self.block_cipher_alg = block_cipher_alg
 
     def cipher(self, filename):
@@ -559,21 +553,18 @@ class CBC:
     A class used to encapsulate every method and
     attribute necessary to encrypt using CBC block
     cipher mode of operation.
+
+    Parameters
+    ----------
+
+    block_cipher_alg : object
+        Block cypher algorithm object.
+
+    iv_length : int
+        Length of the Initialization Vector in bytes.
     """
 
     def __init__(self, block_cipher_alg, iv_length):
-        """
-        ECB class constructor.
-
-        Parameters
-        ----------
-
-        block_cipher_alg : object
-            Block cypher algorithm object.
-
-        iv_length : int
-            Length of the Initialization Vector in bytes.
-        """
         self.block_cipher_alg = block_cipher_alg
         self.iv = self.generate_random_iv(iv_length)
 
@@ -692,6 +683,21 @@ class CBC:
         return format(int(iv, 16) ^ int(block, 16), '032x')
 
 
+class CTR:
+    """
+    A class used to encapsulate every method and
+    attribute necessary to encrypt using CTR block
+    cipher mode of operation.
+    """
+
+    def __init__(self):
+        raise NotImplementedError
+
+    def cipher(self):
+        raise NotImplementedError
+
+    def decipher(self):
+        raise NotImplementedError
 
 class FileTools:
     """
